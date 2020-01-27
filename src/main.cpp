@@ -5,6 +5,8 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>
 #include <TinyGPS++.h>
+#include "AccelStepper.h"
+#include <MultiStepper.h>
 //#include <SoftwareSerial.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -17,13 +19,39 @@ TinyGPSPlus gps;
 #define EEPROM_SIZE 1024
 HardwareSerial SerialGPS(1);
 //SoftwareSerial gpsserial(39,34);
-#define s1dir 23
-#define s1step 36
+#define s1dir  26 //oogabooga
+#define s1step 32 //8
+#define senable 25 //12
+#define s2dir 27 //10
+#define s2step 33 //11
+
+
+
+//Stepper motor_1(2, 3);   //STEP pin =  2, DIR pin = 3
+//Stepper motor_2(9,10);   //STEP pin =  9, DIR pin = 10
+
+
+//stepper1.setEnablePin(senable);
+
+AccelStepper stepper1(AccelStepper::DRIVER, s1step, s1dir);
+AccelStepper stepper2(AccelStepper::DRIVER, s2step, s2dir);
+MultiStepper steppers;
+long positions[2]; // Array of desired stepper positions
+
 void setup() {
-  pinMode(s1dir,OUTPUT);
+  //stepper1.enableOutputs();
+  //pinMode(senable,OUTPUT);
   pinMode(s1step,OUTPUT);
-  digitalWrite(s1dir,HIGH); //dir for stepper
-  digitalWrite(s1step,LOW); //step for stepper
+  pinMode(s2dir,OUTPUT);
+  pinMode(s2step,OUTPUT);
+  pinMode(s1step,OUTPUT);
+  //digitalWrite(senable,HIGH); //enable all steppers!
+  // Configure each stepper
+  stepper1.setMaxSpeed(300.0);
+  stepper2.setMaxSpeed(300.0);
+  steppers.addStepper(stepper1);
+  steppers.addStepper(stepper2);
+
   int retry=0;
   Serial.begin(9600);
   SerialGPS.begin(9600,SERIAL_8N1,16,17);
@@ -82,6 +110,7 @@ void setup() {
     }
     
   }
+  display.clearDisplay();
 }
 void displayInfo(){
   display.clearDisplay();
@@ -129,21 +158,46 @@ void displayInfo(){
   display.display();
 }
 
+String stepmsg = "steppers!";
+int mot1steps = 0;
+int mot2steps = 0;
+int m1step = 300;
+int m2step = 300;
+bool smode = false;
+bool did = false;
 void loop() {
-  display.clearDisplay();
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  int nsteps = 0;
-  while(nsteps < 30){
-    digitalWrite(s1step,HIGH);
-    delay(50);
-    digitalWrite(s1step,LOW);
-    delay(50);
-    nsteps++;
+  if(micros()%500000==0){
+    if(!did){
+      if(smode){
+        stepmsg = "stepping forward";
+        positions[0] = 200;
+        positions[1] = 100;
+        steppers.moveTo(positions);
+      }else{
+        stepmsg = "stepping reverse";
+        positions[0] = -100;
+        positions[1] = -200;
+        steppers.moveTo(positions);
+      }
+      smode = !smode;
+      did =true;
+    }
+  }else{
+    did = false;
   }
-  display.println("now, for the GPS!");
-  display.display();
+  
+  
+  mot1steps = stepper1.currentPosition();
+  mot2steps = stepper2.currentPosition();
+
+  steppers.run();
+  //stepper1.setSpeed(300.0);
+  //stepper2.setSpeed(300.0);
+  //stepper1.runSpeed();
+  //stepper2.runSpeed();
+
+  
+  /*
   while(SerialGPS.available()>0){
     display.display();
     if (gps.encode(SerialGPS.read()))
@@ -155,4 +209,15 @@ void loop() {
     }
   }
   delay(4000);
+  */
+ if(micros()%20000==0){
+  display.clearDisplay();
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);
+  display.println(stepmsg);
+  display.println(mot1steps);
+  display.println(mot2steps);
+  display.display();
+ }
 }
