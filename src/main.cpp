@@ -7,12 +7,16 @@
 #include <TinyGPS++.h>
 #include "AccelStepper.h"
 #include <MultiStepper.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_LSM303_U.h>
 //#include <SoftwareSerial.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+Adafruit_LSM303_Accel_Unified accelerometer = Adafruit_LSM303_Accel_Unified(54321);
+Adafruit_LSM303_Mag_Unified magnetometer = Adafruit_LSM303_Mag_Unified(12345);
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 TinyGPSPlus gps;
@@ -38,81 +42,10 @@ AccelStepper stepper2(AccelStepper::DRIVER, s2step, s2dir);
 MultiStepper steppers;
 long positions[2]; // Array of desired stepper positions
 
-void setup() {
-  //stepper1.enableOutputs();
-  //pinMode(senable,OUTPUT);
-  pinMode(s1step,OUTPUT);
-  pinMode(s2dir,OUTPUT);
-  pinMode(s2step,OUTPUT);
-  pinMode(s1step,OUTPUT);
-  //digitalWrite(senable,HIGH); //enable all steppers!
-  // Configure each stepper
-  stepper1.setMaxSpeed(300.0);
-  stepper2.setMaxSpeed(300.0);
-  steppers.addStepper(stepper1);
-  steppers.addStepper(stepper2);
 
-  int retry=0;
-  Serial.begin(9600);
-  SerialGPS.begin(9600,SERIAL_8N1,16,17);
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
-  Serial.println("success!");
-  display.display();
 
-  vTaskDelay(1000); // Pause for 2 seconds
-  
-  display.clearDisplay();
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  
-
-  /* Set ESP32 to WiFi Station mode */
-  WiFi.mode(WIFI_STA);
-  WiFi.begin();
-  display.println("Attempt to connect to WiFi network...");
-  display.display();
-  while(WiFi.status() != WL_CONNECTED) {
-    display.print(".");
-    display.display();
-    vTaskDelay(500);
-    if (retry++ >= 20) { // timeout for connection is 10 seconds
-      display.println("Connection timeout expired! Start Smartconfig...");
-      display.display();
-      /* start SmartConfig */
-      WiFi.beginSmartConfig();
-      /* Wait for SmartConfig packet from mobile */
-      display.println(F("Waiting for SmartConfig."));
-      display.display();
-      while (!WiFi.smartConfigDone()) {
-        delay(500);
-        display.print(F("."));
-        display.display();
-      }
-      display.println(F(""));
-      display.println(F("SmartConfig done."));
-      /* Wait for WiFi to connect to AP */
-      display.println(F("Waiting for WiFi"));
-      display.display();
-      while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        display.print(F("."));
-        display.display();
-      }
-      display.println(F("WiFi Connected."));
-      display.print(F("IP Address: "));
-      display.println(WiFi.localIP());
-      display.display();
-      delay(2000); // Pause for 2 seconds
-    }
-    
-  }
-  display.clearDisplay();
-}
 void displayInfo(){
+  /*display GPS data */
   display.clearDisplay();
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);        // Draw white text
@@ -158,6 +91,99 @@ void displayInfo(){
   display.display();
 }
 
+bool wifiConnect(){
+  /* Set ESP32 to WiFi Station mode */
+  int retry=0;
+  WiFi.mode(WIFI_STA);
+  WiFi.begin();
+  display.println("Attempt to connect to WiFi network...");
+  display.display();
+  while(WiFi.status() != WL_CONNECTED) {
+    display.print(".");
+    display.display();
+    vTaskDelay(500);
+    if (retry++ >= 20) { // timeout for connection is 10 seconds
+      display.println("Connection timeout expired! Start Smartconfig...");
+      display.display();
+      /* start SmartConfig */
+      WiFi.beginSmartConfig();
+      /* Wait for SmartConfig packet from mobile */
+      display.println(F("Waiting for SmartConfig."));
+      display.display();
+      int retries = 0;
+      while (!WiFi.smartConfigDone()) {
+        delay(500);
+        display.print(F("."));
+        display.display();
+        retries += 1;
+        if(retries > 50){
+          //wifi connection fails
+          return false;
+        }
+      }
+      display.println(F(""));
+      display.println(F("SmartConfig done."));
+      /* Wait for WiFi to connect to AP */
+      display.println(F("Waiting for WiFi"));
+      display.display();
+      while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        display.print(F("."));
+        display.display();
+      }
+      display.println(F("WiFi Connected."));
+      display.print(F("IP Address: "));
+      display.println(WiFi.localIP());
+      display.display();
+      delay(2000); // Pause for 2 seconds
+    }
+  }
+  //wifi connection worked!
+  return true;
+}
+
+void setup() {
+  ////////////////////////////////
+  //stepper
+  pinMode(s1step,OUTPUT);
+  pinMode(s2dir,OUTPUT);
+  pinMode(s2step,OUTPUT);
+  pinMode(s1step,OUTPUT);
+  // Configure each stepper
+  stepper1.setMaxSpeed(230.0);
+  stepper2.setMaxSpeed(230.0);
+  steppers.addStepper(stepper1);
+  steppers.addStepper(stepper2);
+  ////////////////////////////////
+  //Serial
+  
+  Serial.begin(9600);
+  ///////////////////////////////
+  //Display
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.display();
+  vTaskDelay(1000); // Pause for 2 seconds
+  ///////////////////////////////
+  //GPS
+  SerialGPS.begin(9600,SERIAL_8N1,16,17);
+  ///////////////////////////////
+  //accelerometer and magneto
+  accelerometer.begin();
+  magnetometer.enableAutoRange(true);
+  magnetometer.begin();
+  ///////////////////////////////
+  //wifi
+  display.clearDisplay();
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);             // Start at top-left corner
+  bool wificonnected = wifiConnect(); //connect to wifi
+  display.clearDisplay();
+}
+
 String stepmsg = "steppers!";
 int mot1steps = 0;
 int mot2steps = 0;
@@ -165,8 +191,17 @@ int m1step = 300;
 int m2step = 300;
 bool smode = false;
 bool did = false;
+float accelxnum = 0;
+float accelynum = 0;
+float accelznum = 0;
+float magxnum = 0;
+float magynum = 0;
+float magznum = 0;
+
 void loop() {
-  if(micros()%500000==0){
+  
+  if(millis()%5000<3){
+    /* stepper testing */
     if(!did){
       if(smode){
         stepmsg = "stepping forward";
@@ -185,18 +220,23 @@ void loop() {
   }else{
     did = false;
   }
-  
-  
-  mot1steps = stepper1.currentPosition();
-  mot2steps = stepper2.currentPosition();
-
   steppers.run();
-  //stepper1.setSpeed(300.0);
-  //stepper2.setSpeed(300.0);
-  //stepper1.runSpeed();
-  //stepper2.runSpeed();
-
+  /* magnetometer and accelerometer */
   
+  if(micros()%10000 == 0){
+    sensors_event_t eventm;
+    sensors_event_t eventa;
+    accelerometer.getEvent(&eventa);
+    magnetometer.getEvent(&eventm);
+    mot1steps = stepper1.currentPosition();
+    mot2steps = stepper2.currentPosition();
+    accelxnum = eventa.acceleration.x;
+    accelynum = eventa.acceleration.y;
+    accelznum = eventa.acceleration.z;
+    magxnum = eventm.magnetic.x;
+    magynum = eventm.magnetic.y;
+    magznum = eventm.magnetic.z;
+  }
   /*
   while(SerialGPS.available()>0){
     display.display();
@@ -211,6 +251,14 @@ void loop() {
   delay(4000);
   */
  if(micros()%20000==0){
+  /* magnetometer and accelerometer */
+  String accelx = "X: " + String(accelxnum);
+  String accely = "Y: " + String(accelynum);
+  String accelz = "Z: " + String(accelznum);
+  String magx = "X: " + String(magxnum);
+  String magy = "Y: " + String(magynum);
+  String magz = "Z: " + String(magznum);
+   /* make the display work */
   display.clearDisplay();
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);        // Draw white text
@@ -218,6 +266,18 @@ void loop() {
   display.println(stepmsg);
   display.println(mot1steps);
   display.println(mot2steps);
+  display.println("Accel");
+  display.println(accelx);
+  display.println(accely);
+  display.println(accelz);
+  display.setCursor(43,22);
+  display.println("Mag");
+  display.setCursor(43,22+8);
+  display.println(magx);
+  display.setCursor(43,22+8*2);
+  display.println(magy);
+  display.setCursor(43,22+8*3);
+  display.println(magz);
   display.display();
  }
 }
