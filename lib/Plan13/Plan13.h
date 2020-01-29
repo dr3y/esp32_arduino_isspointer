@@ -1,6 +1,6 @@
 #ifndef plan13_h
 #define plan13_h
-#include "WProgram.h"
+#include "Arduino.h"
 
 class Plan13 {
 

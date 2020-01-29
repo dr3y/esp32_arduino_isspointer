@@ -165,7 +165,7 @@ void setup() {
     for(;;); // Don't proceed, loop forever
   }
   display.display();
-  vTaskDelay(1000); // Pause for 2 seconds
+  vTaskDelay(1000); // Pause for 1 seconds
   ///////////////////////////////
   //GPS
   SerialGPS.begin(9600,SERIAL_8N1,16,17);

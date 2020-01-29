@@ -1,8 +1,8 @@
-#include "WProgram.h"
+#include "Arduino.h"
 #include "Plan13.h"
 #define DEBUG false
 #define TEST false
-
+#define M_PI 3.141592653589793238462643
 /*
 Plan13::Plan13() {
 	

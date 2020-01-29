@@ -9,7 +9,7 @@
 Plan13 p13;
 void setup () {
  p13.setFrequency(435300000, 145920000);//AO-51  frequency
-  p13.setLocation(-64.375, 45.8958); // Sackville, NB
+  p13.setLocation(-64.375, 45.8958,100); // Sackville, NB
 Serial.begin(38400);
 }
 void loop() { 
