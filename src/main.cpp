@@ -9,40 +9,41 @@
 #include <MultiStepper.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
-//#include <SoftwareSerial.h>
+#include <config.h>
+//using namespace Menu;
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+//#include <navMenu.cpp>
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_LSM303_Accel_Unified accelerometer = Adafruit_LSM303_Accel_Unified(54321);
 Adafruit_LSM303_Mag_Unified magnetometer = Adafruit_LSM303_Mag_Unified(12345);
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 TinyGPSPlus gps;
-#define EEPROM_SIZE 1024
+
 HardwareSerial SerialGPS(1);
 //SoftwareSerial gpsserial(39,34);
-#define s1dir  26 //oogabooga
-#define s1step 32 //8
-#define senable 25 //12
-#define s2dir 27 //10
-#define s2step 33 //11
-
-
-
-//Stepper motor_1(2, 3);   //STEP pin =  2, DIR pin = 3
-//Stepper motor_2(9,10);   //STEP pin =  9, DIR pin = 10
-
-
-//stepper1.setEnablePin(senable);
 
 AccelStepper stepper1(AccelStepper::DRIVER, s1step, s1dir);
 AccelStepper stepper2(AccelStepper::DRIVER, s2step, s2dir);
 MultiStepper steppers;
 long positions[2]; // Array of desired stepper positions
 
-
+String stepmsg = "steppers!";
+int mot1steps = 0;
+int mot2steps = 0;
+int m1step = 300;
+int m2step = 300;
+bool smode = false;
+bool did = false;
+float accelxnum = 0;
+float accelynum = 0;
+float accelznum = 0;
+float magxnum = 0;
+float magynum = 0;
+float magznum = 0;
+int s1homing = 0; //0 is not homing, 1 is moving negative, 2 is moving positive
+int s2homing = 0; //0 is not homing, 1 is moving negative, 2 is moving positive
 
 void displayInfo(){
   /*display GPS data */
@@ -142,6 +143,8 @@ bool wifiConnect(){
   return true;
 }
 
+
+
 void setup() {
   ////////////////////////////////
   //stepper
@@ -149,6 +152,8 @@ void setup() {
   pinMode(s2dir,OUTPUT);
   pinMode(s2step,OUTPUT);
   pinMode(s1step,OUTPUT);
+  pinMode(s1home, INPUT);
+  pinMode(s2home,INPUT);
   // Configure each stepper
   stepper1.setMaxSpeed(230.0);
   stepper2.setMaxSpeed(230.0);
@@ -182,24 +187,13 @@ void setup() {
   display.setCursor(0,0);             // Start at top-left corner
   bool wificonnected = wifiConnect(); //connect to wifi
   display.clearDisplay();
+  s1homing = 1;
+  s2homing = 1;
 }
 
-String stepmsg = "steppers!";
-int mot1steps = 0;
-int mot2steps = 0;
-int m1step = 300;
-int m2step = 300;
-bool smode = false;
-bool did = false;
-float accelxnum = 0;
-float accelynum = 0;
-float accelznum = 0;
-float magxnum = 0;
-float magynum = 0;
-float magznum = 0;
 
 void loop() {
-  
+  bool imhoming = (s1homing>0) || (s2homing>0);
   if(millis()%5000<3){
     /* stepper testing */
     if(!did){
@@ -220,7 +214,33 @@ void loop() {
   }else{
     did = false;
   }
-  steppers.run();
+  if((s1homing>0) || (s2homing>0)){
+    if((s1homing==1) and digitalRead(s1home)){
+      stepper1.setSpeed(homespeed);
+      stepper1.runSpeed();
+    }else if((s1homing==1) and !digitalRead(s1home)){
+      s1homing = 2;
+      stepper1.setSpeed(homespeed*-.5);
+      stepper1.runSpeed();
+    }else if((s1homing==2) and digitalRead(s1home)){
+      s1homing = 0;
+      stepper1.setCurrentPosition(0);
+    }
+    if((s2homing==1) and digitalRead(s2home)){
+      stepper2.setSpeed(homespeed);
+      stepper2.runSpeed();
+    }else if((s2homing==1) and !digitalRead(s2home)){
+      s2homing = 2;
+      stepper2.setSpeed(homespeed*-.5);
+      stepper2.runSpeed();
+    }else if((s2homing==2) and digitalRead(s2home)){
+      s2homing = 0;
+      stepper2.setCurrentPosition(0);
+    }
+  }else{
+    steppers.run();
+  }
+  
   /* magnetometer and accelerometer */
   
   if(micros()%10000 == 0){
@@ -264,8 +284,10 @@ void loop() {
   display.setTextColor(SSD1306_WHITE);        // Draw white text
   display.setCursor(0,0);
   display.println(stepmsg);
-  display.println(mot1steps);
-  display.println(mot2steps);
+  display.println(digitalRead(s1home));
+  display.println(digitalRead(s2home));
+  //display.println(mot1steps);
+  //display.println(mot2steps);
   display.println("Accel");
   display.println(accelx);
   display.println(accely);
