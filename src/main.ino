@@ -3,6 +3,10 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
+
+//#include "SSD1306Ascii.h"
+//#include "SSD1306AsciiWire.h"
+
 #include <Adafruit_GFX.h>
 #include <TinyGPS++.h>
 #include "AccelStepper.h"
@@ -10,6 +14,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
 #include <config.h>
+#include "OneButton.h"
 //using namespace Menu;
 
 //#include <navMenu.cpp>
@@ -17,6 +22,8 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_LSM303_Accel_Unified accelerometer = Adafruit_LSM303_Accel_Unified(54321);
 Adafruit_LSM303_Mag_Unified magnetometer = Adafruit_LSM303_Mag_Unified(12345);
+
+//SSD1306AsciiWire display;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 TinyGPSPlus gps;
@@ -28,6 +35,11 @@ AccelStepper stepper1(AccelStepper::DRIVER, s1step, s1dir);
 AccelStepper stepper2(AccelStepper::DRIVER, s2step, s2dir);
 MultiStepper steppers;
 long positions[2]; // Array of desired stepper positions
+
+OneButton up_button(BTN_UP,true);
+OneButton down_button(BTN_DOWN,true);
+OneButton sel_button(BTN_SEL,true);
+
 
 String stepmsg = "steppers!";
 int mot1steps = 0;
@@ -44,7 +56,7 @@ float magynum = 0;
 float magznum = 0;
 int s1homing = 0; //0 is not homing, 1 is moving negative, 2 is moving positive
 int s2homing = 0; //0 is not homing, 1 is moving negative, 2 is moving positive
-
+int displaystate = 0; //initial display mode
 void displayInfo(){
   /*display GPS data */
   display.clearDisplay();
@@ -163,12 +175,19 @@ void setup() {
   //Serial
   
   Serial.begin(9600);
+  Serial.println("begin!");
   ///////////////////////////////
   //Display
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
+  //display.begin(&Adafruit128x64, DISPLAY_ADDRESS);
+  //display.setFont(menuFont);
+  //display.setScrollMode(SCROLL_MODE_OFF);
+
+  display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_ADDRESS);
+  display.println("begin!!");
+  //if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+  //  Serial.println(F("SSD1306 allocation failed"));
+  //  for(;;); // Don't proceed, loop forever
+  //}
   display.display();
   vTaskDelay(1000); // Pause for 1 seconds
   ///////////////////////////////
@@ -181,14 +200,20 @@ void setup() {
   magnetometer.begin();
   ///////////////////////////////
   //wifi
+  bool wificonnected = wifiConnect(); //connect to wifi
+  //////////////////////////////
+  //buttons
+  //up_button.attachClick(menu_up);
+  //down_button.attachClick(menu_down);
+  //sel_button.attachClick(menu_select);
+  ////////////////////////////
   display.clearDisplay();
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);        // Draw white text
   display.setCursor(0,0);             // Start at top-left corner
-  bool wificonnected = wifiConnect(); //connect to wifi
-  display.clearDisplay();
   s1homing = 1;
   s2homing = 1;
+  
 }
 
 
@@ -215,6 +240,7 @@ void loop() {
     did = false;
   }
   if((s1homing>0) || (s2homing>0)){
+    stepmsg = "homing!";
     if((s1homing==1) and digitalRead(s1home)){
       stepper1.setSpeed(homespeed);
       stepper1.runSpeed();
@@ -280,26 +306,40 @@ void loop() {
   String magz = "Z: " + String(magznum);
    /* make the display work */
   display.clearDisplay();
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  //display.setTextSize(1);             // Normal 1:1 pixel scale
+  //display.setTextColor(SSD1306_WHITE);        // Draw white text
   display.setCursor(0,0);
-  display.println(stepmsg);
-  display.println(digitalRead(s1home));
-  display.println(digitalRead(s2home));
+  String dtext = "";
+  dtext += stepmsg+"\n";
+  dtext += String(digitalRead(s1home))+"\n";
+  dtext += String(digitalRead(s2home))+"\n";
+  //display.println(stepmsg);
+  //display.println();
+  //display.println(digitalRead(s2home));
   //display.println(mot1steps);
   //display.println(mot2steps);
-  display.println("Accel");
-  display.println(accelx);
-  display.println(accely);
-  display.println(accelz);
-  display.setCursor(43,22);
-  display.println("Mag");
-  display.setCursor(43,22+8);
-  display.println(magx);
-  display.setCursor(43,22+8*2);
-  display.println(magy);
-  display.setCursor(43,22+8*3);
-  display.println(magz);
+  if(displaystate==0){
+    dtext += "Accel  Mag";
+    dtext += "\n";
+    dtext += accelx + " " + magx + "\n";
+    dtext += accely + " " + magy + "\n";
+    dtext += accelz + " " + magz + "\n";
+    //display.setCursor(8,22); //setcursor is text cols, pixel rows
+    //display.println("Mag");
+    //display.setCursor(8,22+8);
+    //display.println(magx);
+    //display.setCursor(8,22+8*2);
+    //display.println(magy);
+    //display.setCursor(8,22+8*3);
+    //display.println(magz);
+  }else if(displaystate == 1){
+    while(SerialGPS.available()>0){
+      if (gps.encode(SerialGPS.read()))
+        displayInfo();
+    }
+  }
+  display.print(dtext);
   display.display();
+  
  }
 }

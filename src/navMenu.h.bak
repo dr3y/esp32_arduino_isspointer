@@ -1,0 +1,37 @@
+#ifndef navMenu_h
+#define navMenu_h
+#include "Arduino.h"
+#include <Adafruit_SSD1306.h>
+#include <menu.h>
+
+
+int ledCtrl;
+int brightnessValue;
+int selTest;
+int chooseTest;
+Adafruit_SSD1306 oled;
+const panel panels[] MEMMODE;
+idx_t tops[];
+navNode* nodes();
+panelsList pList();
+result doAlert();
+result showEvent();
+result action1();
+result action2();
+result ledOn();
+result ledOff();
+result internalLedOn();
+result internalLedOff();
+result adjustBrightness();
+class altPrompt: public prompt{
+    public:
+        Used printTo();
+}
+
+
+
+
+
+
+
+#endif

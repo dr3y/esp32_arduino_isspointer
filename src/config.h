@@ -36,7 +36,7 @@
  * Default font: lcd5x7
  * Comment out the following for using the default font.
  */
-#define LARGE_FONT Verdana12
+//#define LARGE_FONT Verdana12
 
 //Navigate buttons
 #define BTN_SEL     39                 // Select button
@@ -72,6 +72,7 @@
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define DISPLAY_ADDRESS 0x3C//0x3C //OLED display I2C address
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 
 //stepper pins
