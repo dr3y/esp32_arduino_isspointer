@@ -1,3 +1,6 @@
+# 1 "C:\\Users\\andrey\\AppData\\Local\\Temp\\tmpua_jv_oa"
+#include <Arduino.h>
+# 1 "D:/Documents/GitHub/esp32_arduino_isspointer/src/main.ino"
 #include <Arduino.h>
 #include <config.h>
 
@@ -6,8 +9,8 @@
 #include <Wire.h>
 #include <Adafruit_SSD1306.h>
 
-//#include "SSD1306Ascii.h"
-//#include "SSD1306AsciiWire.h"
+
+
 
 #include <Adafruit_GFX.h>
 #include <TinyGPS++.h>
@@ -18,8 +21,8 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-//#include "OneButton.h"
-//menu///////////////////////////
+
+
 #include <menuIO/altKeyIn.h>
 #include <SSD1306_for_menu.h>
 #include <menu.h>
@@ -27,7 +30,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #include <menuIO/chainStream.h>
 
 result doAlert(eventMask e, prompt &item);
-
+result showEvent(eventMask e, navNode& nav, prompt& item);
+result action1(eventMask e);
+result action2(eventMask e, navNode& nav, prompt &item);
+result myLedOn();
+result myLedOff();
+result alert(menuOut& o, idleEvent e);
+result idle(menuOut &o, idleEvent e);
+void displayInfo();
+bool wifiConnect();
+void setup();
+void loop();
+#line 31 "D:/Documents/GitHub/esp32_arduino_isspointer/src/main.ino"
 result showEvent(eventMask e, navNode& nav, prompt& item) {
   Serial.print("event: ");
   Serial.println(e);
@@ -60,7 +74,7 @@ result myLedOff() {
   return proceed;
 }
 
-TOGGLE(ledCtrl, setLed, "Led: ", doNothing, noEvent, noStyle //,doExit,enterEvent,noStyle
+TOGGLE(ledCtrl, setLed, "Led: ", doNothing, noEvent, noStyle
        , VALUE("On", HIGH, doNothing, noEvent)
        , VALUE("Off", LOW, doNothing, noEvent)
       );
@@ -80,8 +94,8 @@ CHOOSE(chooseTest, chooseMenu, "Choose", doNothing, noEvent, noStyle
        , VALUE("Last", -1, doNothing, noEvent)
       );
 
-//customizing a prompt look!
-//by extending the prompt class
+
+
 class altPrompt: public prompt {
   public:
     altPrompt(constMEM promptShadow& p): prompt(p) {}
@@ -115,33 +129,33 @@ MENU(mainMenu, "Main menu", doNothing, noEvent, wrapStyle
 keyMap joystickBtn_map[]={
  {BTN_SEL, defaultNavCodes[enterCmd].ch,INPUT} ,
  {BTN_UP, defaultNavCodes[upCmd].ch,INPUT} ,
- {BTN_DOWN, defaultNavCodes[downCmd].ch,INPUT}  ,
+ {BTN_DOWN, defaultNavCodes[downCmd].ch,INPUT} ,
 };
 
 keyIn<3> joystickBtns(joystickBtn_map);
 serialIn serial(Serial);
 
 menuIn* inputsList[]={&joystickBtns,&serial};
-chainStream<2> in(inputsList);//3 is the number of inputs
+chainStream<2> in(inputsList);
 
 
 #define MAX_DEPTH 2
 
-//define output device
+
 idx_t serialTops[MAX_DEPTH] = {0};
 serialOut outSerial(Serial, serialTops);
 
-//describing a menu output device without macros
-//define at least one panel for menu output
-constMEM panel panels[] MEMMODE = {{0, 0, 128 / fontW, 64 / fontH}};
-navNode* nodes[sizeof(panels) / sizeof(panel)]; //navNodes to store navigation status
-panelsList pList(panels, nodes, 1); //a list of panels and nodes
-idx_t tops[MAX_DEPTH] = {0, 0}; //store cursor positions for each level
-Adafruit_SSD1306Out outOLED(&display, tops, pList, fontW, fontH ,menuOut::minimalRedraw); //oled output device menu driver
-menuOut* constMEM outputs[] MEMMODE = {&outOLED, &outSerial}; //list of output devices
-outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
 
-//macro to create navigation control root object (nav) using mainMenu
+
+constMEM panel panels[] MEMMODE = {{0, 0, 128 / fontW, 64 / fontH}};
+navNode* nodes[sizeof(panels) / sizeof(panel)];
+panelsList pList(panels, nodes, 1);
+idx_t tops[MAX_DEPTH] = {0, 0};
+Adafruit_SSD1306Out outOLED(&display, tops, pList, fontW, fontH ,menuOut::minimalRedraw);
+menuOut* constMEM outputs[] MEMMODE = {&outOLED, &outSerial};
+outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*));
+
+
 NAVROOT(nav, mainMenu, MAX_DEPTH, in, out);
 
 result alert(menuOut& o, idleEvent e) {
@@ -159,7 +173,7 @@ result doAlert(eventMask e, prompt &item) {
   nav.idleOn(alert);
   return proceed;
 }
-//when menu is suspended
+
 result idle(menuOut &o, idleEvent e) {
   o.clear();
   if (&o==&outOLED) {
@@ -175,21 +189,21 @@ result idle(menuOut &o, idleEvent e) {
     }
   return proceed;
 }
-//////////////////////////////////
+
 using namespace Menu;
 
 
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+
 Adafruit_LSM303_Accel_Unified accelerometer = Adafruit_LSM303_Accel_Unified(54321);
 Adafruit_LSM303_Mag_Unified magnetometer = Adafruit_LSM303_Mag_Unified(12345);
 TinyGPSPlus gps;
 HardwareSerial SerialGPS(1);
-//SoftwareSerial gpsserial(39,34);
+
 
 AccelStepper stepper1(AccelStepper::DRIVER, s1step, s1dir);
 AccelStepper stepper2(AccelStepper::DRIVER, s2step, s2dir);
 MultiStepper steppers;
-long positions[2]; // Array of desired stepper positions
+long positions[2];
 
 String stepmsg = "steppers!";
 int mot1steps = 0;
@@ -204,20 +218,20 @@ float accelznum = 0;
 float magxnum = 0;
 float magynum = 0;
 float magznum = 0;
-int s1homing = 0; //0 is not homing, 1 is moving negative, 2 is moving positive
-int s2homing = 0; //0 is not homing, 1 is moving negative, 2 is moving positive
-//int displaystate = 0; //initial display mode
+int s1homing = 0;
+int s2homing = 0;
 
-bool useMenu = true; //using the menu library!
+
+bool useMenu = true;
 
 void displayInfo(){
-  /*display GPS data */
-  //if(!useMenu){
+
+
   display.clearDisplay();
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  display.print(F("Location: ")); 
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.print(F("Location: "));
   if (gps.location.isValid()){
     display.print(gps.location.lat(), 6);
     display.print(F(","));
@@ -259,7 +273,7 @@ void displayInfo(){
 }
 
 bool wifiConnect(){
-  /* Set ESP32 to WiFi Station mode */
+
   int retry=0;
   WiFi.mode(WIFI_STA);
   WiFi.begin();
@@ -273,14 +287,14 @@ bool wifiConnect(){
       display.display();
     }
     vTaskDelay(500);
-    if (retry++ >= 20) { // timeout for connection is 10 seconds
+    if (retry++ >= 20) {
       if(!useMenu){
         display.println("Connection timeout expired! Start Smartconfig...");
         display.display();
       }
-      /* start SmartConfig */
+
       WiFi.beginSmartConfig();
-      /* Wait for SmartConfig packet from mobile */
+
       if(!useMenu){
         display.println(F("Waiting for SmartConfig."));
         display.display();
@@ -294,14 +308,14 @@ bool wifiConnect(){
         }
         retries += 1;
         if(retries > 50){
-          //wifi connection fails
+
           return false;
         }
       }
       if(!useMenu){
         display.println(F(""));
         display.println(F("SmartConfig done."));
-        /* Wait for WiFi to connect to AP */
+
         display.println(F("Waiting for WiFi"));
         display.display();
       }
@@ -318,101 +332,93 @@ bool wifiConnect(){
         display.println(WiFi.localIP());
         display.display();
       }
-      delay(2000); // Pause for 2 seconds
+      delay(2000);
     }
   }
-  //wifi connection worked!
+
   return true;
 }
 
 
 
 void setup() {
-  ////////////////////////////////
-  //stepper
+
+
   pinMode(s1step,OUTPUT);
   pinMode(s2dir,OUTPUT);
   pinMode(s2step,OUTPUT);
   pinMode(s1step,OUTPUT);
   pinMode(s1home, INPUT);
   pinMode(s2home,INPUT);
-  // Configure each stepper
+
   stepper1.setMaxSpeed(230.0);
   stepper2.setMaxSpeed(230.0);
   steppers.addStepper(stepper1);
   steppers.addStepper(stepper2);
-  ////////////////////////////////
-  //Serial
-  
+
+
+
   Serial.begin(9600);
   Serial.println("begin!");
-  ///////////////////////////////
-  //Display
-  
-  //display.begin(&Adafruit128x64, DISPLAY_ADDRESS);
-  //display.setFont(menuFont);
-  //display.setScrollMode(SCROLL_MODE_OFF);
+
+
+
+
+
+
   pinMode(BTN_UP,INPUT);
   pinMode(BTN_DOWN,INPUT);
   pinMode(BTN_SEL,INPUT);
   if(!useMenu){
-    
+
     display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_ADDRESS);
     display.println("begin!!");
-    //if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    //  Serial.println(F("SSD1306 allocation failed"));
-    //  for(;;); // Don't proceed, loop forever
-    //}
+
+
+
+
     display.display();
   }else{
     display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_ADDRESS);
     display.clearDisplay();
-    display.setTextSize(1);             // Normal 1:1 pixel scale
-    display.setTextColor(SSD1306_WHITE);        // Draw white text
-    display.setCursor(0,0); 
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0,0);
     display.print("SSD1306 adafruit");
     display.display();
     delay(2000);
     display.clearDisplay();
-    
+
     nav.idleTask = idle;
-    
+
   }
-  vTaskDelay(1000); // Pause for 1 seconds
-  ///////////////////////////////
-  //GPS
+  vTaskDelay(1000);
+
+
   SerialGPS.begin(9600,SERIAL_8N1,16,17);
-  ///////////////////////////////
-  //accelerometer and magneto
+
+
   accelerometer.begin();
   magnetometer.enableAutoRange(true);
   magnetometer.begin();
-  ///////////////////////////////
-  //wifi
-  //bool wificonnected = wifiConnect(); //connect to wifi
-  //////////////////////////////
-  //buttons
-  //up_button.attachClick(menu_up);
-  //down_button.attachClick(menu_down);
-  //sel_button.attachClick(menu_select);
-  ////////////////////////////
+# 399 "D:/Documents/GitHub/esp32_arduino_isspointer/src/main.ino"
   if(!useMenu){
 
     display.clearDisplay();
-    display.setTextSize(1);             // Normal 1:1 pixel scale
-    display.setTextColor(SSD1306_WHITE);        // Draw white text
-    display.setCursor(0,0);             // Start at top-left corner
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0,0);
   }
   s1homing = 1;
   s2homing = 1;
-  
+
 }
 
 
 void loop() {
   bool imhoming = (s1homing>0) || (s2homing>0);
   if(millis()%5000<3){
-    /* stepper testing */
+
     if(!did){
       if(smode){
         stepmsg = "stepping forward";
@@ -458,9 +464,9 @@ void loop() {
   }else{
     steppers.run();
   }
-  
-  /* magnetometer and accelerometer */
-  
+
+
+
   if(micros()%10000 == 0){
     sensors_event_t eventm;
     sensors_event_t eventa;
@@ -475,31 +481,19 @@ void loop() {
     magynum = eventm.magnetic.y;
     magznum = eventm.magnetic.z;
   }
-  /*
-  while(SerialGPS.available()>0){
-    display.display();
-    if (gps.encode(SerialGPS.read()))
-      displayInfo();
-    if (millis() > 5000 && gps.charsProcessed() < 10){
-      display.println(F("No GPS detected: check wiring."));
-      display.display();
-      while(true);
-    }
-  }
-  delay(4000);
-  */
+# 491 "D:/Documents/GitHub/esp32_arduino_isspointer/src/main.ino"
  if(micros()%10000<5){
-    /* magnetometer and accelerometer */
+
     String accelx = "X: " + String(accelxnum);
     String accely = "Y: " + String(accelynum);
     String accelz = "Z: " + String(accelznum);
     String magx = "X: " + String(magxnum);
     String magy = "Y: " + String(magynum);
     String magz = "Z: " + String(magznum);
-      /* make the display work */
 
-    //display.setTextSize(1);             // Normal 1:1 pixel scale
-    //display.setTextColor(SSD1306_WHITE);        // Draw white text
+
+
+
 
     String dtext = "";
     dtext += stepmsg+"\n";
@@ -510,11 +504,11 @@ void loop() {
             String(digitalRead(BTN_SEL))+" "+
             "\n";
 
-    //display.println(stepmsg);
-    //display.println();
-    //display.println(digitalRead(s2home));
-    //display.println(mot1steps);
-    //display.println(mot2steps);
+
+
+
+
+
     dtext += "Accel  Mag";
     dtext += "\n";
     dtext += accelx + " " + magx + "\n";

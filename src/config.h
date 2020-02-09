@@ -28,7 +28,8 @@
   ZevvPeep8x16
  *  
  */
-
+#ifndef CONFIG_H
+#define CONFIG_H
 #define OLED_I2C_ADDRESS 0x78     //Defined OLED I2C Address
 
 /*
@@ -39,14 +40,14 @@
 //#define LARGE_FONT Verdana12
 
 //Navigate buttons
-#define BTN_SEL     39                 // Select button
-#define BTN_UP     36                // Up Button
-#define BTN_DOWN    34                 // Down Button
+#define BTN_SEL     35                 // Select button
+#define BTN_UP     34                // Up Button
+#define BTN_DOWN    32                 // Down Button
 //#define BTN_ESC     1                 // Exit Button
 // Comment the following to disable internal pullup for Navigate buttons
-#define NAV_BUTTONS_INPUT_PULLUP
+//#define NAV_BUTTONS_INPUT_PULLUP
 
-#define TOTAL_NAV_BUTTONS 4       // Total Navigation Button used
+#define TOTAL_NAV_BUTTONS 3       // Total Navigation Button used
 
 /*Demonstrate PWM with LED on D11*/
 #define LED_PIN 2               //Built in LED pin in ESP32S board
@@ -66,7 +67,7 @@
 #else
 // #define menuFont System5x7
 #define menuFont lcd5x7
-#define fontW 5
+#define fontW 6
 #define fontH 8
 #endif
 
@@ -82,8 +83,10 @@
 #define s2dir 27 //10
 #define s2step 25 //11
 
-#define s1home 35 //homing switch for stepper 1
-#define s2home 32 //homing switch for stepper 2
+#define s1home 36 //homing switch for stepper 1
+#define s2home 39 //homing switch for stepper 2
 
 #define EEPROM_SIZE 1024
 #define homespeed -150
+
+#endif

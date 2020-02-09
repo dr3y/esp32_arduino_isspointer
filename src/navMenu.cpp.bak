@@ -9,30 +9,30 @@
 //Link : https://github.com/greiman/SSD1306Ascii
 // Modified sketch by Tamojit Saha(https://github.com/TamojitSaha)
 
-
+//#include <navMenu.h>
 #include <Arduino.h>
 #include <config.h>
-constexpr int OLED_SDA=4;
-constexpr int OLED_SDC=5;
 
-#define I2C_ADDRESS 0x78
-#define BTN_SEL     39                 // Select button
-#define BTN_UP     36                // Up Button
-#define BTN_DOWN    34                 // Down Button
-#define LED_PIN 2               //Built in LED pin in ESP32S board
 
-// #include <Wire.h>
-#include <menuIO/altKeyIn.h>
+//#define I2C_ADDRESS 0x78
+//#define BTN_SEL     39                 // Select button
+//#define BTN_UP     36                // Up Button
+//#define BTN_DOWN    34                 // Down Button
+//#define LED_PIN 2               //Built in LED pin in ESP32S board
+
 //#include "SSD1306Ascii.h"
 //#include "SSD1306AsciiWire.h"
-#include <Adafruit_SSD1306.h>
-
-#include <menu.h>
-#include <menuIO/SSD1306AsciiOut.h>
-#include <menuIO/serialIO.h>
-#include <menuIO/chainStream.h>
+//#include <Adafruit_SSD1306.h>
+// #include <Wire.h>
+//#include <menuIO/SSD1306AsciiOut.h>
 //enable this include if using esp8266
 // #include <menuIO/esp8266Out.h>
+#include <menuIO/altKeyIn.h>
+#include <SSD1306_for_menu.h>
+#include <menu.h>
+#include <menuIO/serialIO.h>
+#include <menuIO/chainStream.h>
+
 using namespace Menu;
 
 //Define your font here. Default font: lcd5x7
@@ -42,10 +42,12 @@ using namespace Menu;
 
 // #define menuFont System5x7
 // #define menuFont lcd5x7
-// #define fontW 5
-// #define fontH 8
 
+#ifndef DISPLAYDEF
+#define DISPLAYDEF
 Adafruit_SSD1306 display;
+#endif
+//SSD1306AsciiOut 
 
 result doAlert(eventMask e, prompt &item);
 
@@ -60,7 +62,7 @@ int test = 55;
 result action1(eventMask e) {
   Serial.print(e);
   Serial.println(" action1 executed, proceed menu"); Serial.flush();
-  trace(if (e == enterEvent) oled.clear(0, oled.displayWidth(), 2, 3));
+  trace(if (e == enterEvent) display.clear(0, display.displayWidth(), 2, 3));
   return proceed;
 }
 
@@ -158,7 +160,7 @@ constMEM panel panels[] MEMMODE = {{0, 0, 128 / fontW, 64 / fontH}};
 navNode* nodes[sizeof(panels) / sizeof(panel)]; //navNodes to store navigation status
 panelsList pList(panels, nodes, 1); //a list of panels and nodes
 idx_t tops[MAX_DEPTH] = {0, 0}; //store cursor positions for each level
- outOLED(&display, tops, pList, 8, 1+((fontH-1)>>3) ); //oled output device menu driver
+Adafruit_SSD1306Out outOLED(&display, tops, pList, 6, 6 ,menuOut::minimalRedraw); //oled output device menu driver
 menuOut* constMEM outputs[] MEMMODE = {&outOLED, &outSerial}; //list of output devices
 outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
 
