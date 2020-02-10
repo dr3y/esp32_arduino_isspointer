@@ -18,172 +18,178 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-//#include "OneButton.h"
 //menu///////////////////////////
 #include <menuIO/altKeyIn.h>
 #include <SSD1306_for_menu.h>
 #include <menu.h>
 #include <menuIO/serialIO.h>
 #include <menuIO/chainStream.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
-result doAlert(eventMask e, prompt &item);
+#if true //menu stuff in here
 
-result showEvent(eventMask e, navNode& nav, prompt& item) {
-  Serial.print("event: ");
-  Serial.println(e);
-  return proceed;
-}
+  result doAlert(eventMask e, prompt &item);
 
-int test = 55;
-
-result action1(eventMask e) {
-  Serial.print(e);
-  Serial.println(" action1 executed, proceed menu"); Serial.flush();
-  trace(if (e == enterEvent) display.clear(0, display.displayWidth(), 2, 3));
-  return proceed;
-}
-
-result action2(eventMask e, navNode& nav, prompt &item) {
-  Serial.print(e);
-  Serial.println(" action2 executed, quiting menu");
-  return quit;
-}
-
-int ledCtrl = LOW;
-
-result myLedOn() {
-  ledCtrl = HIGH;
-  return proceed;
-}
-result myLedOff() {
-  ledCtrl = LOW;
-  return proceed;
-}
-
-TOGGLE(ledCtrl, setLed, "Led: ", doNothing, noEvent, noStyle //,doExit,enterEvent,noStyle
-       , VALUE("On", HIGH, doNothing, noEvent)
-       , VALUE("Off", LOW, doNothing, noEvent)
-      );
-
-int selTest = 0;
-SELECT(selTest, selMenu, "Select", doNothing, noEvent, noStyle
-       , VALUE("Zero", 0, doNothing, noEvent)
-       , VALUE("One", 1, doNothing, noEvent)
-       , VALUE("Two", 2, doNothing, noEvent)
-      );
-
-int chooseTest = -1;
-CHOOSE(chooseTest, chooseMenu, "Choose", doNothing, noEvent, noStyle
-       , VALUE("First", 1, doNothing, noEvent)
-       , VALUE("Second", 2, doNothing, noEvent)
-       , VALUE("Third", 3, doNothing, noEvent)
-       , VALUE("Last", -1, doNothing, noEvent)
-      );
-
-//customizing a prompt look!
-//by extending the prompt class
-class altPrompt: public prompt {
-  public:
-    altPrompt(constMEM promptShadow& p): prompt(p) {}
-    Used printTo(navRoot &root, bool sel, menuOut& out, idx_t idx, idx_t len, idx_t) override {
-      return out.printRaw(F( "special prompt!"), len);
-    }
-};
-
-MENU(subMenu, "Sub-Menu", showEvent, anyEvent, noStyle
-     , OP("Sub1", showEvent, anyEvent)
-     , OP("Sub2", showEvent, anyEvent)
-     , OP("Sub3", showEvent, anyEvent)
-     , altOP(altPrompt, "", showEvent, anyEvent)
-     , EXIT("<Back")
-    );
-
-MENU(mainMenu, "Main menu", doNothing, noEvent, wrapStyle
-     , OP("Op1", action1, anyEvent)
-     , OP("Op2", action2, enterEvent)
-     , FIELD(test, "Test", "%", 0, 100, 10, 1, doNothing, noEvent, wrapStyle)
-     , SUBMENU(subMenu)
-     , SUBMENU(setLed)
-     , OP("LED On", myLedOn, enterEvent)
-     , OP("LED Off", myLedOff, enterEvent)
-     , SUBMENU(selMenu)
-     , SUBMENU(chooseMenu)
-     , OP("Alert test", doAlert, enterEvent)
-     , EXIT("<Back")
-    );
-
-keyMap joystickBtn_map[]={
- {BTN_SEL, defaultNavCodes[enterCmd].ch,INPUT} ,
- {BTN_UP, defaultNavCodes[upCmd].ch,INPUT} ,
- {BTN_DOWN, defaultNavCodes[downCmd].ch,INPUT}  ,
-};
-
-keyIn<3> joystickBtns(joystickBtn_map);
-serialIn serial(Serial);
-
-menuIn* inputsList[]={&joystickBtns,&serial};
-chainStream<2> in(inputsList);//3 is the number of inputs
-
-
-#define MAX_DEPTH 2
-
-//define output device
-idx_t serialTops[MAX_DEPTH] = {0};
-serialOut outSerial(Serial, serialTops);
-
-//describing a menu output device without macros
-//define at least one panel for menu output
-constMEM panel panels[] MEMMODE = {{0, 0, 128 / fontW, 64 / fontH}};
-navNode* nodes[sizeof(panels) / sizeof(panel)]; //navNodes to store navigation status
-panelsList pList(panels, nodes, 1); //a list of panels and nodes
-idx_t tops[MAX_DEPTH] = {0, 0}; //store cursor positions for each level
-Adafruit_SSD1306Out outOLED(&display, tops, pList, fontW, fontH ,menuOut::minimalRedraw); //oled output device menu driver
-menuOut* constMEM outputs[] MEMMODE = {&outOLED, &outSerial}; //list of output devices
-outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
-
-//macro to create navigation control root object (nav) using mainMenu
-NAVROOT(nav, mainMenu, MAX_DEPTH, in, out);
-
-result alert(menuOut& o, idleEvent e) {
-  if (e == idling) {
-    o.setCursor(0, 0);
-    o.print("alert test");
-    o.setCursor(0, 1);
-    o.print("press [select]");
-    o.setCursor(0, 2);
-    o.print("to continue...");
+  result showEvent(eventMask e, navNode& nav, prompt& item) {
+    Serial.print("event: ");
+    Serial.println(e);
+    return proceed;
   }
-  return proceed;
-}
-result doAlert(eventMask e, prompt &item) {
-  nav.idleOn(alert);
-  return proceed;
-}
-//when menu is suspended
-result idle(menuOut &o, idleEvent e) {
-  o.clear();
-  if (&o==&outOLED) {
-    if (e==idling) {
-      o.println("OLED");
-      o.println("Suspended menu");
+
+  int test = 55;
+
+  result action1(eventMask e) {
+    Serial.print(e);
+    Serial.println(" action1 executed, proceed menu"); Serial.flush();
+    trace(if (e == enterEvent) display.clear(0, display.displayWidth(), 2, 3));
+    return proceed;
+  }
+
+  result action2(eventMask e, navNode& nav, prompt &item) {
+    Serial.print(e);
+    Serial.println(" action2 executed, quiting menu");
+    return quit;
+  }
+
+  int ledCtrl = LOW;
+
+  result myLedOn() {
+    ledCtrl = HIGH;
+    return proceed;
+  }
+  result myLedOff() {
+    ledCtrl = LOW;
+    return proceed;
+  }
+
+  TOGGLE(ledCtrl, setLed, "Led: ", doNothing, noEvent, noStyle //,doExit,enterEvent,noStyle
+        , VALUE("On", HIGH, doNothing, noEvent)
+        , VALUE("Off", LOW, doNothing, noEvent)
+        );
+
+  int selTest = 0;
+  SELECT(selTest, selMenu, "Select", doNothing, noEvent, noStyle
+        , VALUE("Zero", 0, doNothing, noEvent)
+        , VALUE("One", 1, doNothing, noEvent)
+        , VALUE("Two", 2, doNothing, noEvent)
+        );
+
+  int chooseTest = -1;
+  CHOOSE(chooseTest, chooseMenu, "Choose", doNothing, noEvent, noStyle
+        , VALUE("First", 1, doNothing, noEvent)
+        , VALUE("Second", 2, doNothing, noEvent)
+        , VALUE("Third", 3, doNothing, noEvent)
+        , VALUE("Last", -1, doNothing, noEvent)
+        );
+
+  //customizing a prompt look!
+  //by extending the prompt class
+  class altPrompt: public prompt {
+    public:
+      altPrompt(constMEM promptShadow& p): prompt(p) {}
+      Used printTo(navRoot &root, bool sel, menuOut& out, idx_t idx, idx_t len, idx_t) override {
+        return out.printRaw(F( "special prompt!"), len);
+      }
+  };
+
+  MENU(subMenu, "Sub-Menu", showEvent, anyEvent, noStyle
+      , OP("Sub1", showEvent, anyEvent)
+      , OP("Sub2", showEvent, anyEvent)
+      , OP("Sub3", showEvent, anyEvent)
+      , altOP(altPrompt, "", showEvent, anyEvent)
+      , EXIT("<Back")
+      );
+
+  MENU(mainMenu, "Main menu", doNothing, noEvent, wrapStyle
+      , OP("Op1", action1, anyEvent)
+      , OP("Op2", action2, enterEvent)
+      , FIELD(test, "Test", "%", 0, 100, 10, 1, doNothing, noEvent, wrapStyle)
+      , SUBMENU(subMenu)
+      , SUBMENU(setLed)
+      , OP("LED On", myLedOn, enterEvent)
+      , OP("LED Off", myLedOff, enterEvent)
+      , SUBMENU(selMenu)
+      , SUBMENU(chooseMenu)
+      , OP("Alert test", doAlert, enterEvent)
+      , EXIT("<Back")
+      );
+
+  keyMap joystickBtn_map[]={
+  {BTN_SEL, defaultNavCodes[enterCmd].ch,INPUT} ,
+  {BTN_UP, defaultNavCodes[upCmd].ch,INPUT} ,
+  {BTN_DOWN, defaultNavCodes[downCmd].ch,INPUT}  ,
+  };
+
+  keyIn<3> joystickBtns(joystickBtn_map);
+  serialIn serial(Serial);
+
+  menuIn* inputsList[]={&joystickBtns,&serial};
+  chainStream<2> in(inputsList);//3 is the number of inputs
+
+
+  #define MAX_DEPTH 2
+
+  //define output device
+  idx_t serialTops[MAX_DEPTH] = {0};
+  serialOut outSerial(Serial, serialTops);
+
+  //describing a menu output device without macros
+  //define at least one panel for menu output
+  constMEM panel panels[] MEMMODE = {{0, 0, 128 / fontW, 64 / fontH}};
+  navNode* nodes[sizeof(panels) / sizeof(panel)]; //navNodes to store navigation status
+  panelsList pList(panels, nodes, 1); //a list of panels and nodes
+  idx_t tops[MAX_DEPTH] = {0, 0}; //store cursor positions for each level
+  Adafruit_SSD1306Out outOLED(&display, tops, pList, fontW, fontH ,menuOut::minimalRedraw); //oled output device menu driver
+  menuOut* constMEM outputs[] MEMMODE = {&outOLED, &outSerial}; //list of output devices
+  outputsList out(outputs, sizeof(outputs) / sizeof(menuOut*)); //outputs list
+
+  //macro to create navigation control root object (nav) using mainMenu
+  NAVROOT(nav, mainMenu, MAX_DEPTH, in, out);
+
+  result alert(menuOut& o, idleEvent e) {
+    if (e == idling) {
+      o.setCursor(0, 0);
+      o.print("alert test");
+      o.setCursor(0, 1);
+      o.print("press [select]");
+      o.setCursor(0, 2);
+      o.print("to continue...");
     }
-  } else
-    switch (e) {
-      case idleStart: o.println("suspending menu!"); break;
-      case idling: o.println("suspended..."); break;
-      case idleEnd: o.println("resuming menu."); break;
-    }
-  return proceed;
-}
+    return proceed;
+  }
+  result doAlert(eventMask e, prompt &item) {
+    nav.idleOn(alert);
+    return proceed;
+  }
+  //when menu is suspended
+  result idle(menuOut &o, idleEvent e) {
+    o.clear();
+    if (&o==&outOLED) {
+      if (e==idling) {
+        o.println("OLED");
+        o.println("Suspended menu");
+      }
+    } else
+      switch (e) {
+        case idleStart: o.println("suspending menu!"); break;
+        case idling: o.println("suspended..."); break;
+        case idleEnd: o.println("resuming menu."); break;
+      }
+    return proceed;
+  }
+#endif
 //////////////////////////////////
 using namespace Menu;
 
 
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+// Declaration for hardware objects
 Adafruit_LSM303_Accel_Unified accelerometer = Adafruit_LSM303_Accel_Unified(54321);
 Adafruit_LSM303_Mag_Unified magnetometer = Adafruit_LSM303_Mag_Unified(12345);
 TinyGPSPlus gps;
 HardwareSerial SerialGPS(1);
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP); //, "europe.pool.ntp.org", 3600, 60000);
 //SoftwareSerial gpsserial(39,34);
 
 AccelStepper stepper1(AccelStepper::DRIVER, s1step, s1dir);
@@ -328,14 +334,17 @@ bool wifiConnect(){
 
 
 void setup() {
-  ////////////////////////////////
-  //stepper
-  pinMode(s1step,OUTPUT);
-  pinMode(s2dir,OUTPUT);
-  pinMode(s2step,OUTPUT);
-  pinMode(s1step,OUTPUT);
-  pinMode(s1home, INPUT);
-  pinMode(s2home,INPUT);
+  if(true){ //pin configs
+    pinMode(s1step,OUTPUT);
+    pinMode(s2dir,OUTPUT);
+    pinMode(s2step,OUTPUT);
+    pinMode(s1step,OUTPUT);
+    pinMode(s1home, INPUT);
+    pinMode(s2home,INPUT);
+    pinMode(BTN_UP,INPUT);
+    pinMode(BTN_DOWN,INPUT);
+    pinMode(BTN_SEL,INPUT);
+  }
   // Configure each stepper
   stepper1.setMaxSpeed(230.0);
   stepper2.setMaxSpeed(230.0);
@@ -343,28 +352,19 @@ void setup() {
   steppers.addStepper(stepper2);
   ////////////////////////////////
   //Serial
-  
   Serial.begin(9600);
   Serial.println("begin!");
   ///////////////////////////////
   //Display
-  
-  //display.begin(&Adafruit128x64, DISPLAY_ADDRESS);
-  //display.setFont(menuFont);
-  //display.setScrollMode(SCROLL_MODE_OFF);
-  pinMode(BTN_UP,INPUT);
-  pinMode(BTN_DOWN,INPUT);
-  pinMode(BTN_SEL,INPUT);
   if(!useMenu){
-    
+    display.clearDisplay();
+    display.setTextSize(1);             // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE);        // Draw white text
+    display.setCursor(0,0);             // Start at top-left corner
     display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_ADDRESS);
     display.println("begin!!");
-    //if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    //  Serial.println(F("SSD1306 allocation failed"));
-    //  for(;;); // Don't proceed, loop forever
-    //}
     display.display();
-  }else{
+  }else{ //display init
     display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_ADDRESS);
     display.clearDisplay();
     display.setTextSize(1);             // Normal 1:1 pixel scale
@@ -389,20 +389,10 @@ void setup() {
   magnetometer.begin();
   ///////////////////////////////
   //wifi
-  //bool wificonnected = wifiConnect(); //connect to wifi
-  //////////////////////////////
-  //buttons
-  //up_button.attachClick(menu_up);
-  //down_button.attachClick(menu_down);
-  //sel_button.attachClick(menu_select);
+  bool wificonnected = wifiConnect(); //connect to wifi
+  //UDP client
+  timeClient.begin();
   ////////////////////////////
-  if(!useMenu){
-
-    display.clearDisplay();
-    display.setTextSize(1);             // Normal 1:1 pixel scale
-    display.setTextColor(SSD1306_WHITE);        // Draw white text
-    display.setCursor(0,0);             // Start at top-left corner
-  }
   s1homing = 1;
   s2homing = 1;
   
@@ -411,7 +401,7 @@ void setup() {
 
 void loop() {
   bool imhoming = (s1homing>0) || (s2homing>0);
-  if(millis()%5000<3){
+  if(millis()%5000<3){ //stepper jog for testing
     /* stepper testing */
     if(!did){
       if(smode){
@@ -431,7 +421,7 @@ void loop() {
   }else{
     did = false;
   }
-  if((s1homing>0) || (s2homing>0)){
+  if((s1homing>0) || (s2homing>0)){ //stepper homing
     stepmsg = "homing!";
     if((s1homing==1) and digitalRead(s1home)){
       stepper1.setSpeed(homespeed);
