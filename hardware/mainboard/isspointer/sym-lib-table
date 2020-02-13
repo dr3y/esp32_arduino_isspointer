@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name isspointer)(type Legacy)(uri ${KIPRJMOD}/isspointer.lib)(options "")(descr ""))
+)
