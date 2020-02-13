@@ -62,8 +62,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
     ledCtrl = LOW;
     return proceed;
   }
-
-  TOGGLE(ledCtrl, setLed, "Led: ", doNothing, noEvent, noStyle //,doExit,enterEvent,noStyle
+//,doExit,enterEvent,noStyle
+  TOGGLE(ledCtrl, setLed, "Led: ", doNothing, noEvent, noStyle 
         , VALUE("On", HIGH, doNothing, noEvent)
         , VALUE("Off", LOW, doNothing, noEvent)
         );
@@ -391,7 +391,9 @@ void setup() {
   //wifi
   bool wificonnected = wifiConnect(); //connect to wifi
   //UDP client
-  timeClient.begin();
+  if(wificonnected){
+    timeClient.begin();
+  }
   ////////////////////////////
   s1homing = 1;
   s2homing = 1;
