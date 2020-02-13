@@ -1,3 +1,4 @@
 (sym_lib_table
   (lib (name isspointer)(type Legacy)(uri ${KIPRJMOD}/isspointer.lib)(options "")(descr ""))
+  (lib (name isspointer-eagle-import)(type Legacy)(uri ${KIPRJMOD}/isspointer-eagle-import.lib)(options "")(descr ""))
 )
