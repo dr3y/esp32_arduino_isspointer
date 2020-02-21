@@ -1,5 +1,14 @@
 EESchema-DOCLIB  Version 2.0
 #
+$CMP EE-SX3350
+D opto endstop
+$ENDCMP
+#
+$CMP Vmot
+D Power symbol creates a global label with name "Vdrive"
+K power-flag
+$ENDCMP
+#
 $CMP esp32-WROOM-32D
 F https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32d_esp32-wroom-32u_datasheet_en.pdf
 $ENDCMP

@@ -1,5 +1,9 @@
 EESchema-DOCLIB  Version 2.0
 #
+$CMP EE-SX3350
+D opto endstop
+$ENDCMP
+#
 $CMP Vmot
 D Power symbol creates a global label with name "Vdrive"
 K power-flag
