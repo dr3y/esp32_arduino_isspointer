@@ -1,5 +1,11 @@
 EESchema-DOCLIB  Version 2.0
 #
+$CMP 24AA32-OT
+D I2C Serial EEPROM, 2Kb, SOT-23
+K I2C Serial EEPROM
+F http://ww1.microchip.com/downloads/en/DeviceDoc/21709J.pdf
+$ENDCMP
+#
 $CMP CFAL12864N
 D SSD1306 OLED display
 K display, OLED, SSD1306
@@ -7,6 +13,30 @@ $ENDCMP
 #
 $CMP EE-SX3350
 D opto endstop
+$ENDCMP
+#
+$CMP NEO-6M-0-001
+D GNSS Module NEO M8, VCC 2.7V to 3.6V
+K ublox GPS GNSS module
+F https://www.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_%28UBX-15031086%29.pdf
+$ENDCMP
+#
+$CMP NEO-8Q
+D GNSS Module NEO 8, VCC 1.65V to 3.6V
+K ublox GPS GNSS module
+F https://www.u-blox.com/sites/default/files/NEO-8Q_DataSheet_%28UBX-15031913%29.pdf
+$ENDCMP
+#
+$CMP NEO-M8Q
+D GNSS Module NEO M8, VCC 2.7V to 3.6V
+K ublox GPS GNSS module
+F https://www.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_%28UBX-15031086%29.pdf
+$ENDCMP
+#
+$CMP TPS79133-EP
+D 200mA UltraLow-Noise, High-Precision, Fast RF, Low Drop-out Voltage Regualtor, Adjustable Output, SOT-23
+K LDO Voltage Regulator 200mA adjustable
+F http://www.ti.com/lit/ds/symlink/tps79333-ep.pdf
 $ENDCMP
 #
 $CMP Vmot
