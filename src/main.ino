@@ -22,7 +22,7 @@
 #include "BluetoothSerial.h"
 #include "CommandHandler.h"
 
-#include "HttpClient.h"
+#include <HttpClient.h>
 
 //Bluetooth stuff/////////////////////////////
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -230,6 +230,41 @@ bool get_wifi_creds(String& ssid, String& psk){
 
 }
 
+String get_TLE(String mysatname){
+  int err =0;
+  String out_str = "";
+  if(WiFi.status() == WL_CONNECTED){
+    WiFiClient w;
+    HttpClient http(w);
+    err = http.get(kHostname, kPath);
+    if(err >=0){
+      SerialBT.println(err);
+      err = http.skipResponseHeaders();
+      if (err >= 0){
+        int bodyLen = http.contentLength();
+        unsigned long timeoutStart = millis();
+        char c;
+        // Whilst we haven't timed out & haven't reached the end of the body
+        //TODO make this not blocking
+        while ( (http.connected() || http.available()) &&
+               ((millis() - timeoutStart) < kNetworkTimeout)){
+          if (http.available()){
+            c = http.read();
+            // Print out this character
+            Serial.print(c);
+            bodyLen--;
+            // We read something, reset the timeout counter
+            timeoutStart = millis();
+          }else{
+            // We haven't got any data, so let's pause to allow some to arrive
+            delay(kNetworkDelay);
+          }
+        }
+      }
+    }
+  }
+}
+
 
 
 bool init_wifi()
@@ -330,6 +365,7 @@ void wifiMaintain(){
     
   }
 }
+
 void setup() {
   if(true){ //pin configs
     pinMode(s1step,OUTPUT);
