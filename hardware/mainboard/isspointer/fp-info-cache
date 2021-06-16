@@ -1,4 +1,4 @@
-17679673847415869
+17681296849838098
 Battery
 BatteryHolder_Bulgin_BX0036_1xC
 Bulgin Battery Holder, BX0036, Battery Type C (https://www.bulgin.com/products/pub/media/bulgin/data/Battery_holders.pdf)
@@ -78525,6 +78525,13 @@ opto, endstop, LED
 0
 6
 6
+isspointer
+EE-SX4081
+
+
+0
+5
+5
 isspointer
 ESP32-WROOM-32D
 

@@ -11,6 +11,10 @@ D SSD1306 OLED display
 K display, OLED, SSD1306
 $ENDCMP
 #
+$CMP EE-SX3081-SX4081
+D opto endstop
+$ENDCMP
+#
 $CMP EE-SX3350
 D opto endstop
 $ENDCMP

@@ -82,8 +82,16 @@ const char kHostname[] =  "celestrak.com";
 const char kPath[] = "/NORAD/elements/stations.txt";
 const int kNetworkTimeout = 30*1000;
 const int kNetworkDelay = 1000;
+int getTLEwait = 0;
+enum TLE_get_stages { WAITING, GET_BEGIN, GET_READDATA,TLE_FINISHED};
+enum TLE_get_stages TLE_stage = WAITING;
+String cur_TLE = "";
+String getting_TLE = "";
+int httpbodyLen = 0;
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-
+unsigned long httpTimeoutStart = 0;
+WiFiClient w;
+HttpClient http(w);
 
 
 
@@ -230,57 +238,75 @@ bool get_wifi_creds(String& ssid, String& psk){
 
 }
 
-String get_TLE(String mysatname){
-  int err =0;
-  String out_str = "";
-  if(WiFi.status() == WL_CONNECTED){
-    WiFiClient w;
-    HttpClient http(w);
-    err = http.get(kHostname, kPath);
-    if(err >=0){
-      SerialBT.println(err);
-      err = http.skipResponseHeaders();
-      if (err >= 0){
-        int bodyLen = http.contentLength();
-        unsigned long timeoutStart = millis();
-        char c;
-        // Whilst we haven't timed out & haven't reached the end of the body
-        //TODO make this not blocking
-        while ( (http.connected() || http.available()) &&
-               ((millis() - timeoutStart) < kNetworkTimeout)){
-          if (http.available()){
-            c = http.read();
-            // Print out this character
-            Serial.print(c);
-            bodyLen--;
-            // We read something, reset the timeout counter
-            timeoutStart = millis();
-          }else{
-            // We haven't got any data, so let's pause to allow some to arrive
-            delay(kNetworkDelay);
-          }
-        }
-      }
-    }
+void Cmd_get_TLE(CommandParameter &p){
+  if(TLE_stage == WAITING){
+    TLE_stage = GET_BEGIN;
+  }else{
+    SerialBT.println("TLE_stage not ready");
   }
 }
 
+void maintain_TLE(){
+  int err = 0;
+  switch(TLE_stage){
+    case WAITING:
+      break;
+    case GET_BEGIN:
+      err = 0;
+      getting_TLE = "";
+      if(WiFi.status() == WL_CONNECTED){
+        err = http.get(kHostname, kPath);
+        if(err >=0){
+          err = http.skipResponseHeaders();
+          if (err >= 0){
+            httpbodyLen = http.contentLength();
+            httpTimeoutStart = millis();
+            TLE_stage = GET_READDATA;
+          }else{
+          SerialBT.println("error2");
+          }
+        }else{
+          SerialBT.println("error1");
+        }
+      }else{
+        SerialBT.println("wifi is off, not getting TLE");
+        TLE_stage = WAITING;
+      }
+      break;
+    case GET_READDATA:
+      if((http.connected() || http.available()) &&
+          ((millis() - httpTimeoutStart) < kNetworkTimeout)){
+            while (http.available()){
+              // Print out this character
+              getting_TLE+=http.read();
+              // We read something, reset the timeout counter
+            }  
+            httpTimeoutStart = millis();
+          }else{
+            TLE_stage = TLE_FINISHED;
+          }
+      break;
+    case TLE_FINISHED:
+      SerialBT.println(getting_TLE);
+      getting_TLE = "";
+      TLE_stage = WAITING;
+      break;
+  }
+}
+  
 
-
-bool init_wifi()
+bool init_wifi(String desired_ssid, String desired_psk)
 {
-  String temp_pref_ssid = preferences.getString("pref_ssid","");
-  String temp_pref_pass = preferences.getString("pref_pass","");
-  pref_ssid = temp_pref_ssid.c_str();
-  pref_pass = temp_pref_pass.c_str();
-
-  Serial.println(pref_ssid);
-  Serial.println(pref_pass);
+  const char* cstr_desired_ssid = desired_ssid.c_str();
+  const char* cstr_desired_psk = desired_psk.c_str();
+  Serial.println("attempting connection with");
+  Serial.println(desired_ssid);
+  Serial.println(desired_psk);
 
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
 
   start_wifi_millis = millis();
-  WiFi.begin(pref_ssid, pref_pass);
+  WiFi.begin(cstr_desired_ssid, cstr_desired_psk);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -289,6 +315,9 @@ bool init_wifi()
       return false;
     }
   }
+  Serial.println("connection worked! saving data in EEPROM");
+  preferences.putString("pref_ssid", desired_ssid);
+  preferences.putString("pref_pass", desired_psk);
   return true;
 }
 
@@ -342,10 +371,10 @@ void wifiMaintain(){
     case PASS_ENTERED:
       Serial.println("PASS_ENTERED");
       wifi_stage = WAIT_CONNECT;
-      preferences.putString("pref_ssid", client_wifi_ssid);
-      preferences.putString("pref_pass", client_wifi_password);
-      if (init_wifi()) { // Connected to WiFi
+      
+      if (init_wifi(client_wifi_ssid,client_wifi_password)) { // Connected to WiFi
         connected_string = "SUCCESS";
+        
         SerialBT.println(connected_string);
       } else { // try again
         wifi_stage = LOGIN_FAILED;
@@ -369,9 +398,9 @@ void wifiMaintain(){
 void setup() {
   if(true){ //pin configs
     pinMode(s1step,OUTPUT);
+    pinMode(s1dir,OUTPUT);
     pinMode(s2dir,OUTPUT);
     pinMode(s2step,OUTPUT);
-    pinMode(s1step,OUTPUT);
     pinMode(s1home, INPUT);
     pinMode(s2home,INPUT);
     pinMode(BTN_UP,INPUT);
@@ -406,6 +435,7 @@ void setup() {
   Cmds.AddCommand(F("GetGPSData"),Cmd_GetGPS_Data);
   Cmds.AddCommand(F("GetWifiStat"),Cmd_Show_Ip);
   Cmds.AddCommand(F("SWi"),Cmd_SetWifi);
+  Cmds.AddCommand(F("GetTLE"),Cmd_get_TLE);
   //GPS
   SerialGPS.begin(9600,SERIAL_8N1,16,17);
   ///////////////////////////////
@@ -415,6 +445,10 @@ void setup() {
   magnetometer.begin();
   ///////////////////////////////
   //wifi
+  String temp_pref_ssid = preferences.getString("pref_ssid","");
+  String temp_pref_pass = preferences.getString("pref_pass","");
+  client_wifi_ssid = temp_pref_ssid.c_str();
+  client_wifi_password = temp_pref_pass.c_str();
   wifi_stage = PASS_ENTERED;
   //EEPROM
 
@@ -422,12 +456,15 @@ void setup() {
   s1homing = 0;
   s2homing = 0;
   
+
+
 }
 
 void loop() {
   Cmds.Process();
   gps_process();
   wifiMaintain();
+  maintain_TLE();
   bool imhoming = (s1homing>0) || (s2homing>0);
   if(millis()%5000<3){ //stepper jog for testing
     /* stepper testing */

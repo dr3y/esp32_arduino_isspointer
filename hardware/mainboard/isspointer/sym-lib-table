@@ -1,4 +1,5 @@
 (sym_lib_table
   (lib (name isspointer)(type Legacy)(uri ${KIPRJMOD}/isspointer.lib)(options "")(descr ""))
   (lib (name isspointer-eagle-import)(type Legacy)(uri ${KIPRJMOD}/isspointer-eagle-import.lib)(options "")(descr ""))
+  (lib (name 2021-06-06_17-51-44)(type Legacy)(uri ${ALT3DMOD}/esp32_arduino_isspointer/hardware/mainboard/isspointer/2021-06-06_17-51-44.lib)(options "")(descr ""))
 )

@@ -77,11 +77,13 @@
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 
 //stepper pins
-#define s1dir  26 //oogabooga
-#define s1step 33 //8
+
 #define senable 2 //12
-#define s2dir 27 //10
+
+#define s1step 27 //10
+#define s1dir  26 //oogabooga
 #define s2step 25 //11
+#define s2dir 33 //8
 
 #define s1home 36 //homing switch for stepper 1
 #define s2home 39 //homing switch for stepper 2
