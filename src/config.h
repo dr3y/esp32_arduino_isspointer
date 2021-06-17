@@ -89,6 +89,6 @@
 #define s2home 39 //homing switch for stepper 2
 
 #define EEPROM_SIZE 1024
-#define homespeed -150
+#define homespeed -300
 
 #endif

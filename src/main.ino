@@ -52,6 +52,7 @@ int m1step = 300;
 int m2step = 300;
 bool smode = false;
 bool did = false;
+bool imhoming = false;
 float accelxnum = 0;
 float accelynum = 0;
 float accelznum = 0;
@@ -223,6 +224,18 @@ void Cmd_SetWifi(CommandParameter &p){
   Serial.println(client_wifi_password);
 }
 
+void Cmd_SetLon(CommandParameter &p){
+  String inputlong = String(p.NextParameter());
+  float inputlongflt = strtof(inputlong.c_str(),NULL);
+}
+
+void Cmd_SetLat(CommandParameter &p){
+  
+}
+
+void Cmd_SetAlt(CommandParameter &p){
+  
+}
 void Cmd_Show_Ip(CommandParameter &p){
   SerialBT.print("my IP is "+WiFi.localIP());
 }
@@ -453,8 +466,8 @@ void setup() {
   //EEPROM
 
   ////////////////////////////
-  s1homing = 0;
-  s2homing = 0;
+  s1homing = 1;
+  s2homing = 1;
   
 
 
@@ -465,8 +478,8 @@ void loop() {
   gps_process();
   wifiMaintain();
   maintain_TLE();
-  bool imhoming = (s1homing>0) || (s2homing>0);
-  if(millis()%5000<3){ //stepper jog for testing
+  imhoming = (s1homing>0) || (s2homing>0);
+  if(millis()%5000<3 && !imhoming){ //stepper jog for testing
     /* stepper testing */
     if(!did){
       if(smode){
@@ -484,30 +497,37 @@ void loop() {
   }else{
     did = false;
   }
-  if((s1homing>0) || (s2homing>0)){ //stepper homing
-    if((s1homing==1) and digitalRead(s1home)){
+  if(imhoming){ //stepper homing
+    bool s1homeval = digitalRead(s1home) && digitalRead(s1home);
+    bool s2homeval = digitalRead(s2home) && digitalRead(s2home);
+
+    if((s1homing==1) && s1homeval){
       stepper1.setSpeed(homespeed);
       stepper1.runSpeed();
-    }else if((s1homing==1) and !digitalRead(s1home)){
+    }else if((s1homing==1) && !s1homeval){
       s1homing = 2;
       stepper1.setSpeed(homespeed*-.5);
       stepper1.runSpeed();
-    }else if((s1homing==2) and digitalRead(s1home)){
+    }else if((s1homing==2) && s1homeval){
       s1homing = 0;
       stepper1.setCurrentPosition(0);
     }
-    if((s2homing==1) and digitalRead(s2home)){
+
+    if((s2homing==1) && s2homeval){
       stepper2.setSpeed(homespeed);
       stepper2.runSpeed();
-    }else if((s2homing==1) and !digitalRead(s2home)){
+    }else if((s2homing==1) && !s2homeval){
       s2homing = 2;
       stepper2.setSpeed(homespeed*-.5);
       stepper2.runSpeed();
-    }else if((s2homing==2) and digitalRead(s2home)){
+    }else if((s2homing==2) && s2homeval){
       s2homing = 0;
       stepper2.setCurrentPosition(0);
     }
-  }else{
-    steppers.run();
+  }else if(millis()%5000==0){
+    
   }
+  
+  
+  steppers.run();
 }
